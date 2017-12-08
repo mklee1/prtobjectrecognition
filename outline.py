@@ -1,7 +1,5 @@
 import os
-import matplotlib.pyplot as plt
 import math
-import scipy
 import cv2
 import numpy as np
 
@@ -55,7 +53,8 @@ def outline():
     result = ""
     predicted_objs = ""
     count = 0
-    car_count = ped_count = car_success = ped_success = dontcare = 0
+    car_count = ped_count = cyc_count = car_success = ped_success = cyc_success = 0
+    dontcare = 0
     success = 0
     for img_fname in img_files:
         print (img_fname)
@@ -63,7 +62,7 @@ def outline():
         image = cv2.imread(img_dir+img_fname)
         image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
         map_name = img_fname[:-4]
-        if (int(map_name) > (3740+500)): # only do 500 images
+        if (int(map_name) > (3740+200)): # only do 500 images
             break
         for bb in bb_map[map_name]:
             count += 1
@@ -76,10 +75,12 @@ def outline():
                 car_count += 1
             elif (actual_objs[count] == "Pedestrian"):
                 ped_count += 1
+            elif (actual_objs[count] == "Cyclist"):
+                cyc_count += 1
 
             obj = image[bb[1]:bb[3]+1, bb[0]:bb[2]+1]
-            obj_width = len(obj)
-            obj_height = len(obj[0])
+            obj_width = len(obj[0])
+            obj_height = len(obj)
 
             mask_car_new = cv2.resize(car_mask, (int(obj_width), int(obj_height)))
             mask_ped_new = cv2.resize(ped_mask, (int(obj_width), int(obj_height)))
@@ -90,8 +91,8 @@ def outline():
             car_prod = 0; ped_prod = 0; cyc_prod = 0
             for i in range(obj_height):
                 for j in range(obj_width):
-                    car_prod += mask_car_new[i,j,0]*obj[j,i]/255
-                    ped_prod += mask_ped_new[i,j,0]*obj[j,i]/255
+                    car_prod += mask_car_new[i,j,0]*obj[i,j]/255
+                    ped_prod += mask_ped_new[i,j,0]*obj[i,j]/255
                     # cyc_prod += mask_cyc_new[i,j,0]*obj[j,i]
             # prods = [car_prod, ped_prod, cyc_prod]
             prods = [car_prod, ped_prod]
@@ -107,19 +108,23 @@ def outline():
                 car_success += 1
             elif actual_objs[count] == predict_obj == "Pedestrian":
                 ped_success += 1
+            elif actual_objs[count] == predict_obj == "Cyclist":
+                cyc_success += 1
 
     f = open('result.txt', 'w')
     f.write(result)
     f.close()
     count -= dontcare
-    success = ped_success + car_success
+    success = ped_success + car_success + cyc_success
     car_success_rate = round(car_success/car_count*100, 2)
     ped_success_rate = round(ped_success/ped_count*100, 2)
+    cyc_success_rate = round(cyc_success/cyc_count*100, 2)
     all_success_rate = round(success/count*100, 2)
     print (car_success, car_count, ped_success, ped_count, dontcare)
 
     print ("Car Success: " + str(car_success) + " / " + str(car_count) + " = " + str(car_success_rate))
     print ("Pedestrian Success: " + str(ped_success) + " / " + str(ped_count) + " = " + str(ped_success_rate))
+    print ("Cyclist Success: " + str(cyc_success) + " / " + str(cyc_count) + " = " + str(cyc_success_rate))
     print ("Total Success: " + str(success) + " / " + str(count) + " = " + str(all_success_rate))
 
 outline()
